@@ -1,29 +1,37 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export async function POST(req: Request) {
-  const { idea } = await req.json();
+  try {
+    const { prompt } = await req.json();
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content:
-          "You are an AI business strategist. Convert ideas into clear business plans.",
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
-      {
-        role: "user",
-        content: idea,
-      },
-    ],
-  });
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are an AI business strategist. Convert ideas into clear business plans.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+      }),
+    });
 
-  return NextResponse.json({
-    result: completion.choices[0].message.content,
-  });
+    const data = await response.json();
+
+    return NextResponse.json({
+      result: data.choices[0].message.content,
+    });
+  } catch (err) {
+    return NextResponse.json({ error: "AI failed" }, { status: 500 });
+  }
 }
